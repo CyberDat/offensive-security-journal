@@ -1,9 +1,7 @@
-
-```markdown
 # 🔐 Offensive-Security-Journal
 
-![Security](https://img.shields.io/badge/Focus-Offensive--Security-red?style=for-the-badge)
-![Platform](https://img.shields.io/badge/Labs-TryHackMe%20%7C%20Cisco-blue?style=for-the-badge)
+![Security](https://img.shields.io/badge/Focus-Offensive_Security-red?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Labs-TryHackMe_&_Cisco-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 ## 📖 Overview
